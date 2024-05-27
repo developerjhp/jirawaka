@@ -1,0 +1,36 @@
+  name: Wakatime-Jira Integration
+
+on:
+  schedule:
+    - cron: ${{ secrets.CRON_SCHEDULE }} # Use the cron schedule from GitHub Secrets
+      timezone: ${{ secrets.TIMEZONE }} # Use the timezone from GitHub Secrets
+  push:
+    branches:
+      - main
+
+jobs:
+  run-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run integration
+        env:
+          WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }} # use the WakaTime API key from GitHub Secrets
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }} # use the Jira API token from GitHub Secrets
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }} # use the Jira email from GitHub Secrets
+          JIRA_URL: ${{ secrets.JIRA_URL }} # use the Jira URL from GitHub Secrets
+          EMAIL_USER: ${{ secrets.EMAIL_USER }} # use the email user from GitHub Secrets
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }} # use the email password from GitHub Secrets
+          COUNTRY: ${{ secrets.COUNTRY }} # use the country from GitHub Secrets
+          TIMEZONE: ${{ secrets.TIMEZONE }} # use the timezone from GitHub Secrets
+        run: node jiraWaka.js
