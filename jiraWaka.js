@@ -1,7 +1,6 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 const nodemailer = require('nodemailer');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -39,6 +38,7 @@ app.post('/api/save-config', (req, res) => {
 app.post('/api/submit-config', async (req, res) => {
   const { today, wakatimeApiKey, jiraApiKey, jiraServer, jiraUsername, project, assignDisplayName } = req.body;
 
+  // Jira 클라이언트 설정
   const jira = new JiraClient({
     host: jiraServer,
     basic_auth: {
@@ -51,15 +51,16 @@ app.post('/api/submit-config', async (req, res) => {
   const branchDurations = {};
 
   try {
-    const wakatimeResponse = await axios.get(
+    // WakaTime API에서 데이터 가져오기
+    const wakatimeResponse = await fetch(
       `https://wakatime.com/api/v1/users/current/durations?date=${TODAY}&project=${project}&api_key=${wakatimeApiKey}`
     );
 
-    if (wakatimeResponse.status !== 200) {
+    if (!wakatimeResponse.ok) {
       throw new Error('Failed to fetch from WakaTime API');
     }
 
-    const wakatimeData = wakatimeResponse.data;
+    const wakatimeData = await wakatimeResponse.json();
 
     for (const work of wakatimeData.data) {
       if (work.branch) {
@@ -76,6 +77,7 @@ app.post('/api/submit-config', async (req, res) => {
     }
 
     let messages = [];
+    // Jira API를 사용하여 시간 로그 기록
     for (const ticketNumber in branchDurations) {
       const totalDuration = Math.round(branchDurations[ticketNumber] / 60);
       const ticket = await jira.issue.getIssue({ issueKey: ticketNumber });
@@ -116,8 +118,6 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-const logFilePath = project => path.join(__dirname, `log/${project}.log`);
-
 function appendLog(message, project, jiraUsername) {
   const logDirectory = path.join(__dirname, 'log');
   if (!fs.existsSync(logDirectory)) {
@@ -134,6 +134,10 @@ function appendLog(message, project, jiraUsername) {
 
     sendEmail(jiraUsername, `${project} 작업시간 기록 완료`, message.split('\n').join('<br/>'));
   });
+}
+
+function logFilePath(project) {
+  return path.join(__dirname, `log/${project}.log`);
 }
 
 async function sendEmail(to, subject, html) {
